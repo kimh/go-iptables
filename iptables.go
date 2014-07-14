@@ -114,10 +114,29 @@ func (c *Chain) Forward(action Action, ip net.IP, port int, proto, destAddr stri
 
 func (c *Chain) Prerouting(action Action, args ...string) error {
 	a := append(nat, fmt.Sprint(action), "PREROUTING")
-	if len(args) > 0 {
-		a = append(a, args...)
+	var to_dest, to_host string
+	var _args []string
+
+	for num, arg := range args {
+		fmt.Println(arg)
+		if arg == "--to-destination" {
+			to_dest = arg
+			to_host = args[num+1]
+			_args = args[0:num]
+		}
 	}
-	if output, err := Raw(append(a, "-j", c.Name)...); err != nil {
+
+	if to_dest != "" {
+		a = append(a, _args...)
+		a = append(a, "-j", c.Name, to_dest, to_host)
+	}
+
+	/*
+	   fmt.Println("Debug args", a)
+	   fmt.Println("Debug to_dest", to_dest)
+	*/
+
+	if output, err := Raw(a...); err != nil {
 		return err
 	} else if len(output) != 0 {
 		return fmt.Errorf("Error iptables prerouting: %s", output)
